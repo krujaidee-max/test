@@ -1276,27 +1276,44 @@ async function ensurePose(){
   ];
 
   let poseBase = null;
+// (1) camera_utils: พยายามโหลด แต่ไม่สำเร็จ "ไม่ต้อง" โยนทิ้ง
+let camLoaded = false;
+for (const base of CAM_BASES){
+  try { await loadScript(`${base}/camera_utils.js`); camLoaded = true; break; } catch(e){}
+}
+if (!camLoaded) console.warn('camera_utils ไม่โหลด แต่ข้ามได้');
 
-  // พยายามโหลด camera_utils ก่อน (ตัวนี้เบา)
-  let camLoaded = false;
-  for (const base of CAM_BASES){
-    try { await loadScript(`${base}/camera_utils.js`); camLoaded = true; break; } catch(e){}
-  }
-  if (!camLoaded) throw new Error('โหลด camera_utils ไม่ได้');
+// (2) pose.js: ต้องมีจริง → ถ้าไม่ได้ค่อย throw
+let poseBase = null;
+for (const base of POSE_BASES){
+  try {
+    await loadScript(`${base}/pose.js`);
+    poseBase = base;
+    break;
+  } catch(e){}
+}
+if (!poseBase) throw new Error('โหลด pose.js ไม่ได้จากทุกแหล่ง');
 
-  // พยายามโหลด pose.js พร้อมกำหนด locateFile ให้ชี้ฐานเดียวกัน
-  for (const base of POSE_BASES){
-    try {
-      await loadScript(`${base}/pose.js`);
-      poseBase = base;
-      break;
-    } catch(e){}
-  }
-  if (!poseBase) throw new Error('โหลด pose.js ไม่ได้จากทุกแหล่ง');
+// (3) ตรวจ global ให้ชัดเจน ก่อน new
+if (!(window.Pose && window.Pose.Pose)) {
+  throw new Error('ตัวแปร global Pose ไม่พร้อมหลังโหลด pose.js');
+}
 
-  // สร้างอ็อบเจ็กต์ Pose + ตั้งค่า
-  const p = new Pose.Pose({
-    locateFile: (f) => `${poseBase}/${f}`   // ให้ .wasm/.data ดึงจากฐานเดียวกัน
+const p = new Pose.Pose({
+  locateFile: (f) => `${poseBase}/${f}`
+});
+p.setOptions({
+  modelComplexity: 1,
+  smoothLandmarks: true,
+  minDetectionConfidence: 0.5,
+  minTrackingConfidence: 0.5
+});
+p.onResults(res => {
+  window.__LAST_LANDMARKS__ = (res && res.poseLandmarks && res.poseLandmarks.length) ? res.poseLandmarks : null;
+});
+
+window.__POSE_INSTANCE__ = p;
+window.__POSE_READY__ = true;
   });
   p.setOptions({
     modelComplexity: 1,
@@ -1732,3 +1749,4 @@ async function ensurePose(){
 
 </body>
 </html>
+
