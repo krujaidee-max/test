@@ -1,0 +1,1734 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>เกม : ตะลุยอวกาศ คำ 3 ชนิด</title>
+<style>
+/* ===== ฟอนต์รวมหน้า ===== */
+@font-face{
+  font-family: 'MyGameFont';
+  src: url('image/THSarabunNew.woff2') format('woff2'),
+       url('image/THSarabunNew.woff') format('woff'),
+       url('image/THSarabunNew.ttf') format('truetype');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face{
+  font-family: 'MyGameFont';
+  src: url('image/THSarabunNewBold.woff2') format('woff2'),
+       url('image/THSarabunNewBold.woff') format('woff'),
+       url('image/THSarabunNewBold.ttf') format('truetype');
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+html, body, button, input, select, textarea, .pill, .btn, .btn-mini,
+.levelBtn, #startTitle, #countdown, .label, #timer {
+  font-family: 'MyGameFont', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+}
+
+/* ===== ธีมพื้นฐาน + พื้นหลังชุดอุกกาบาต ===== */
+:root{ --glass: rgba(0,0,0,.45); --ok:#10b981; --bad:#ef4444; }
+*{ box-sizing:border-box }
+html,body{ height:100%; margin:0; }
+body{
+  background: url("image/background2.png") center center / cover no-repeat fixed !important;
+  overflow:hidden; color:#fff;
+}
+#game{ position:relative; width:100vw; height:100vh; overflow:hidden }
+
+/* === offsets สำหรับคะแนนและอุกกาบาต === */
+:root{
+  --score-offset-x: -30px;   /* + ขวา / - ซ้าย */
+  --score-offset-y: -2px;    /* + ลง  / - ขึ้น */
+  --comet-offset-x: 100px;   /* เลื่อนอุกกาบาตแกน X */
+  --comet-offset-y: 60px;    /* เลื่อนอุกกาบาตแกน Y */
+}
+
+/* ขยับ pill “คะแนน” เฉพาะอันเดียว */
+#scorePill{ transform: translate(var(--score-offset-x), var(--score-offset-y)); }
+
+/* ===== HUD ===== */
+.hud{
+  position:fixed; inset:26px 12px auto 38px;
+  display:flex; align-items:center; gap:12px; justify-content:space-between; pointer-events:none
+}
+.hud .left,.hud .right{ display:flex; align-items:center; gap:12px }
+.pill{ background:var(--glass); backdrop-filter:blur(6px); padding:8px 12px; border-radius:999px; box-shadow:0 4px 18px rgba(0,0,0,.25) }
+#timer{ font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:.5px; font-size:20px }
+.icon img{ width:44px; height:44px; object-fit:contain; filter:drop-shadow(0 4px 10px rgba(0,0,0,.6)); border-radius:8px }
+.stack{ display:flex; flex-direction:column; gap:8px; align-items:flex-start }
+.btn-mini{ pointer-events:auto; background:#1f2937; color:#fff; border:none; border-radius:12px; padding:8px 12px; font-weight:800; cursor:pointer; box-shadow:0 4px 18px rgba(0,0,0,.25) }
+.btn-mini:hover{ filter:brightness(1.1) }
+
+/* ===== จัด HUD ฝั่งขวาให้ชิดขวา + แถวล่างเรียงบน→ล่าง ===== */
+.hud .right { align-items: flex-end; }
+.hud .right .stack { align-items: flex-end; }
+.hud .right .col{ display:flex; flex-direction:column; gap:8px; align-items:flex-end; }
+.hud .right .pill{ text-align:right; }
+
+/* ===== หน้าจอเริ่ม (ภารกิจ + นับถอยหลัง) ===== */
+#startScreen{
+  position:fixed; inset:0; display:none;
+  flex-direction:column; align-items:center; justify-content:center;
+  background:rgba(0,0,0,.9); z-index:9999; text-align:center; padding:24px
+}
+#startTitle{ font-size:clamp(26px,5vw,48px); font-weight:900; margin-bottom:10px }
+#startBtn{
+  margin-top:12px; padding:10px 18px; border:0; border-radius:12px; font-weight:800; cursor:pointer; background:#1f2937; color:#fff
+}
+#startBtn:hover{ filter:brightness(1.1) }
+#countdown{ display:none; font-size:clamp(56px,12vw,120px); font-weight:1000; line-height:1; margin-top:8px }
+
+/* ===== Landing: เลือกด่าน + คู่มือ ===== */
+#landing{
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column; gap: 22px;
+  align-items: center; justify-content: center;
+  background: url("image/background2.png") center/cover no-repeat fixed !important;
+  z-index: 20000; transition: opacity .3s ease;
+}
+#landing.hide{ opacity: 0; pointer-events: none; visibility: hidden; }
+#landing .brand{ width: min(92vw, 1100px); }
+#landing .brand img{ width:100%; height:auto; display:block; filter:drop-shadow(0 10px 30px rgba(0,0,0,.6)); }
+.level-menu{ display:flex; flex-direction:column; gap:14px; width:min(92vw, 640px); }
+.levelBtn{
+  width:100%; padding: 10px 16px;
+  font-size: clamp(20px, 4vw, 34px); font-weight: 1000; letter-spacing:.2px;
+  border: 0; border-radius: 14px; color: #fff; background: rgba(0,0,0,.55);
+  box-shadow: 0 10px 28px rgba(0,0,0,.35); cursor: pointer; text-align:center;
+  border:1px solid rgba(255,255,255,.18); backdrop-filter: blur(6px);
+}
+.levelBtn:hover{ filter: brightness(1.08); }
+.levelBtn:active{ transform: translateY(1px); }
+
+/* ===== คู่มือ ===== */
+#guideScreen{
+  position:fixed; inset:0;
+  display:none; align-items:center; justify-content:center;
+  background:url("image/background2.png") center/cover no-repeat;
+  z-index: 20001;
+}
+#guideScreen .guide-wrap{
+  width:min(95vw, 1200px);
+  max-height:92vh;
+  display:flex; flex-direction:column; gap:10px;
+  align-items:center; justify-content:center;
+}
+#guideScreen img{
+  width:100%; height:auto; max-height:92vh;
+  border-radius:14px;
+  box-shadow:0 20px 60px rgba(0,0,0,.55);
+  display:block;
+}
+#guideScreen .guide-close{
+  align-self:flex-end; margin-top:8px;
+  background:#1f2937; color:#fff; border:none; border-radius:12px; padding:8px 12px; font-weight:800; cursor:pointer;
+}
+#guideScreen .guide-close:hover{ filter:brightness(1.1) }
+
+/* ===== ป๊อปอัปจบเกม ===== */
+#overlay{ position:fixed; inset:0; display:grid; place-items:center; background:rgba(0,0,0,.55); visibility:hidden; opacity:0; transition:.25s; z-index:9999 }
+#overlay.show{ visibility:visible; opacity:1 }
+.panel{ background:rgba(20,20,20,.9); border:1px solid rgba(255,255,255,.1); padding:22px 26px; border-radius:20px; min-width:320px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.5) }
+.panel h1{ margin:0 0 6px; font-size:28px }
+.panel p{ margin:8px 0 18px; opacity:.85 }
+.btn{ background:#1f2937; color:#fff; border:none; border-radius:12px; padding:10px 16px; font-weight:700; cursor:pointer }
+.btn:hover{ filter:brightness(1.1) }
+.actions{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:10px; }
+#overlay .btn { padding: 12px 24px; font-size: 20px; font-weight: 900; border-radius: 18px; min-width: 180px; }
+#restartBtn { background:#1f2937; } #restartBtn:hover{ filter:brightness(1.1) }
+#selectLevelBtn { background:#2563eb; } #selectLevelBtn:hover{ background:#1d4ed8 }
+#nextLevelBtn { background:#10b981; } #nextLevelBtn:hover{ background:#059669 }
+.wrong-box{ margin-top:14px; text-align:left; display:none; }
+.wrong-title{ font-weight:900; font-size:30px; margin-bottom:8px }
+.wrong-list{ display:flex; flex-wrap:wrap; gap:8px; max-height:140px; font-size:28px; overflow:auto }
+.chip{ background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); padding:6px 10px; border-radius:999px; font-weight:700 }
+.muted{ opacity:.7 }
+
+/* ===== ปุ่มลอยคะแนน +/- ===== */
+.float{ position:fixed; left:0; top:0; pointer-events:none; font-weight:800; font-size:24px; text-shadow:0 2px 8px rgba(0,0,0,.5) }
+@keyframes rise{ 0%{ transform:translate(-50%,-10px); opacity:0 } 15%{ opacity:1 } 100%{ transform:translate(-50%,-70px); opacity:0 } }
+
+/* ===== เรืออวกาศ ===== */
+#ship{
+  position:fixed;
+  left:50%; bottom:24px;
+  width:280px; height:280px;
+  background:url("image/ship.png") center/contain no-repeat;
+  transform:translateX(-50%) rotate(0deg);
+  transform-origin:50% 75%;
+  pointer-events:none;
+  z-index:8001;
+}
+
+/* ===== อุกาบาต ===== */
+.comet{
+  position:absolute; top:-160px;
+  width:var(--size,110px); height:var(--size,110px);
+  background-image:url("image/comet.png");
+  background-size:100% 100%; background-repeat:no-repeat;
+  filter:drop-shadow(0 10px 22px rgba(0,0,0,.6));
+  cursor:crosshair; user-select:none; will-change:transform,opacity;
+}
+.comet .label{
+  position:absolute; inset:0; display:grid; place-items:center;
+  font-weight:800; color:#fff; text-shadow:0 2px 6px rgba(0,0,0,.8);
+  font-size: calc(var(--size) / 6); pointer-events:none;
+}
+/* ไฮไลต์ลูกเร็ว */
+.comet.fast{
+  filter:
+    drop-shadow(0 0 22px rgba(255,215,0,.65))
+    drop-shadow(0 10px 22px rgba(0,0,0,.6));
+}
+.piece{
+  position:fixed; width:14px; height:14px; opacity:1; pointer-events:none;
+  background-image:url("image/comet.png"); background-repeat:no-repeat;
+  background-size:var(--csizeW) var(--csizeH);
+}
+@keyframes blast{ to{ transform:translate(var(--dx),var(--dy)) rotate(var(--rot)); opacity:0 } }
+
+/* (ซ่อน kid/acceptBox เดิม) */
+#kid, #acceptBox { display:none !important; }
+
+@media (max-width:480px){
+  #timer{ font-size:20px }
+}
+
+/* ให้ HUD ลอยสูงกว่า landing (20000) */
+.hud{ z-index: 22001; }
+
+/* ===== มุมขวา-บน: รูปลอยเหนือพื้นหลัง ===== */
+#game::after{
+  content:"";
+  position: fixed;
+  top: 0; right: 0;
+  width: var(--corner2-img-w, 200px);
+  height: var(--corner2-img-h, 200px);
+  background: url("image/button2.png") no-repeat right top / contain;
+  pointer-events: none;
+  z-index: 21000;
+  opacity: 1;
+}
+body::after{
+  content:"";
+  position: fixed;
+  top: 0; left: 0;
+  width: var(--corner-img-w, 260px);
+  height: var(--corner-img-h, 260px);
+  background: url("image/button1.png") no-repeat left top / contain;
+  pointer-events: none;
+  z-index: 21000;
+}
+
+/* ซ่อนไอคอนรูปอุกกาบาตข้างคะแนน */
+.hud .right .icon { display: none !important; }
+
+/* ==== กล้องแบบกระจก + แคนวาสรอยฟาด ==== */
+#cameraMirror{
+  position:fixed; inset:0;
+  width:100vw; height:100vh;
+  object-fit:cover;
+  transform: scaleX(-1);       /* กระจก */
+  z-index: 1;                  /* ใต้ชั้นเกม/ฮัด */
+  display:none;                /* เปิดเมื่อผู้ใช้กดเท่านั้น */
+  background:#000;
+}
+
+/* ==== วงกลมหน้าผาก (อยู่เหนือเลเซอร์ แต่ใต้ HUD) ==== */
+#headCanvas{
+  position:fixed; inset:0;
+  width:100vw; height:100vh;
+  z-index: 21490;           /* HUD=22001, เอฟเฟกต์=21500 */
+  pointer-events:none;
+  display:none;             /* เปิดเฉพาะตอนใช้โหมดหัว */
+}
+
+/* ให้เลเยอร์สนามเกมอยู่เหนือวิดีโอแน่ ๆ */
+#game{ z-index: 3; position:relative; }
+
+/* === Override z-index สำหรับเอฟเฟกต์แตกกระจาย + คะแนนลอย === */
+.float{
+  position:fixed; left:0; top:0;
+  pointer-events:none;
+  font-weight:800; font-size:24px;
+  text-shadow:0 2px 8px rgba(0,0,0,.5);
+  z-index: 21500;            /* อยู่เหนือ #game / มุมภาพ แต่ต่ำกว่า HUD */
+}
+.piece{
+  position:fixed; width:14px; height:14px; opacity:1; pointer-events:none;
+  background-image:url("image/comet.png"); background-repeat:no-repeat;
+  background-size:var(--csizeW) var(--csizeH);
+  z-index: 21500;            /* เช่นเดียวกัน */
+}
+
+/* ↓ ขยับยานลงมาอีก (อยู่ใกล้ขอบล่างมากขึ้น) */
+#ship{
+  bottom: -50px;   /* เดิม 24px — ปรับเลขนี้ได้ตามใจ เช่น 0px, 8px, 12px */
+}
+@media (max-width: 480px){
+  #ship{ bottom: -10px; }  /* มือถือให้โผล่มากขึ้นหน่อย */
+}
+
+
+</style>
+</head>
+<body>
+<!-- ==== AR Mirror (วิดีโอแบบกระจก + แคนวาสวาดรอยฟาด) ==== -->
+
+<video id="cameraMirror" playsinline muted></video>
+<canvas id="headCanvas"></canvas>
+  <div id="game" aria-label="สนามเกม">
+    <div id="kid" aria-hidden="true">
+      <div id="acceptBox"><div class="txt" id="ruleLabel">ภารกิจ</div></div>
+    </div>
+  </div>
+
+  <!-- ===== Landing: เลือกด่าน + ปุ่มคู่มือ ===== -->
+  <div id="landing" role="dialog" aria-modal="true">
+    <div class="brand"><img src="image/banner2.png" alt="Banner"></div>
+    <div class="level-menu">
+      <button class="levelBtn" data-level="0">ด่านที่ 1 : “คำนาม”</button>
+      <button class="levelBtn" data-level="1">ด่านที่ 2 : “คำกริยา”</button>
+      <button class="levelBtn" data-level="2">ด่านที่ 3 : “คำวิเศษณ์”</button>
+      <button class="levelBtn" id="guideBtn">กติกาการเล่น 📖</button>
+    </div>
+  </div>
+
+  <!-- ===== ภารกิจ / หน้าเริ่ม ===== -->
+  <div id="startScreen">
+    <div id="startTitle">ภารกิจ: ยิงคำเป้าหมายให้ได้ “คะแนนสูงสุด” ภายในเวลา</div>
+    <button id="startBtn">เริ่ม</button>
+    <div id="countdown">3</div>
+  </div>
+
+  <!-- ===== คู่มือ ===== -->
+  <div id="guideScreen">
+    <div class="guide-wrap">
+      <img src="image/guide.png" alt="คู่มือเกม">
+      <button id="guideBack" class="btn-mini guide-close">เมนูหลัก</button>
+    </div>
+  </div>
+
+  <!-- ===== HUD ===== -->
+  <div class="hud">
+    <div class="left">
+      <div class="stack">
+        <div class="pill" id="timer">02:00</div>
+        <div style="display:flex; gap:8px;">
+          <button id="pauseBtn" class="btn-mini">⏸ หยุด</button>
+          <button id="quickRestart" class="btn-mini">กลับสู่หน้าหลัก</button>
+        </div>
+<!-- 🎤 Voice Toggle -->
+<div style="display:flex; gap:8px; align-items:center;">
+  <button id="micBtn" class="btn-mini" title="เปิด/ปิด ระบบสั่งเสียง">🎤 เสียง: ปิด</button>
+  <div id="voicePill" class="pill" style="display:none;">กำลังฟัง…</div>
+<button id="camBtn" class="btn-mini" title="เปิด/ปิด กล้อง AR">📷 กล้อง: ปิด</button>
+</div>
+      </div>
+    </div>
+    <div class="right">
+      <div class="stack" style="align-items:flex-end">
+        <div style="display:flex; gap:8px; align-items:center;">
+          <div class="icon pill" style="padding:4px 8px">
+            <img src="image/comet.png" alt="comet">
+          </div>
+          <div class="pill" id="scorePill">คะแนน: <span id="score">0</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ยาน ===== -->
+  <div id="ship" aria-hidden="true"></div>
+
+  <!-- ===== ป๊อปอัปจบเกม ===== -->
+  <div id="overlay">
+    <div class="panel">
+      <h1 id="endTitle">หมดเวลา!</h1>
+      <p>คะแนนสุดท้าย: <b id="finalScore">0</b></p>
+      <p id="accumSummary" style="display:none; color:#ffd700; font-weight:900;">
+        คะแนนสะสมรวม (3 รอบ): <b id="accumTotal">0</b>
+      </p>
+      <div class="wrong-box">
+        <div class="wrong-title">คำที่ยิงพลาด (ไม่นับเป้า)</div>
+        <div id="wrongList" class="wrong-list"></div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="restartBtn">เริ่มใหม่</button>
+        <button class="btn" id="selectLevelBtn">เลือกด่าน</button>
+        <button class="btn" id="nextLevelBtn">ด่านถัดไป</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== เสียง ===== -->
+  <audio id="hitSound" preload="auto"></audio>
+  <audio id="winSound" preload="auto"></audio>
+  <audio id="bgm" preload="auto" loop></audio>
+
+  <!-- ===== ปุ่ม Mute / Fullscreen ===== -->
+  <button id="muteBtn" aria-pressed="false" title="Mute / Unmute"
+    style="position:fixed; right:12px; bottom:12px; width:44px; height:44px; border-radius:999px; background:rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.3); color:#fff; font-size:18px; line-height:1; display:grid; place-items:center; cursor:pointer; z-index:10000;">🔊</button>
+
+  <button id="fsBtn" aria-pressed="false" title="เข้าสู่โหมดเต็มจอ"
+    style="position:fixed; right:12px; bottom:62px; width:44px; height:44px; border-radius:999px; background:rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.3); color:#fff; font-size:18px; line-height:1; display:grid; place-items:center; cursor:pointer; z-index:10000;">⛶</button>
+
+  <!-- ===== ควบคุม Mute ===== -->
+  <script>
+  (function(){
+    const muteBtn = document.getElementById('muteBtn');
+    if(!muteBtn) return;
+    let isMuted = false;
+    function applyMute(m){
+      isMuted = !!m;
+      document.querySelectorAll('audio').forEach(a => {
+        a.muted = isMuted;
+        if(isMuted){ a.setAttribute('muted',''); } else { a.removeAttribute('muted'); }
+      });
+      muteBtn.setAttribute('aria-pressed', String(isMuted));
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    }
+    muteBtn.addEventListener('click', () => applyMute(!isMuted));
+  })();
+  </script>
+
+  <!-- ===== ควบคุม Fullscreen ===== -->
+  <script>
+  (function(){
+    const fsBtn = document.getElementById('fsBtn');
+    if (!fsBtn) return;
+
+    function fsEnabled(){
+      return document.fullscreenEnabled || document.webkitFullscreenEnabled || document.msFullscreenEnabled;
+    }
+    function isFull(){
+      return document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+    }
+    function requestFS(){
+      const el = document.documentElement;
+      const req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+      req && req.call(el);
+    }
+    function exitFS(){
+      const ex = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+      ex && ex.call(document);
+    }
+    function render(){
+      const on = !!isFull();
+      fsBtn.setAttribute('aria-pressed', String(on));
+      fsBtn.title = on ? 'ออกจากโหมดเต็มจอ' : 'เข้าสู่โหมดเต็มจอ';
+      fsBtn.textContent = on ? '🗗' : '⛶';
+    }
+
+    if (!fsEnabled()){
+      fsBtn.style.display = 'none';
+      return;
+    }
+
+    fsBtn.addEventListener('click', () => {
+      if (isFull()) exitFS(); else requestFS();
+    });
+
+    document.addEventListener('fullscreenchange', render);
+    document.addEventListener('webkitfullscreenchange', render);
+    document.addEventListener('msfullscreenchange', render);
+    render();
+  })();
+  </script>
+
+  <!-- ===== ระบบเกม ===== -->
+  <script>
+  (() => {
+    /* ---------- DOM refs ---------- */
+    const game = document.getElementById('game');
+    const timerEl = document.getElementById('timer');
+    const overlay = document.getElementById('overlay');
+    const endTitleEl = document.getElementById('endTitle');
+    const finalScoreEl = document.getElementById('finalScore');
+    const restartBtn = document.getElementById('restartBtn');
+    const quickRestart = document.getElementById('quickRestart');
+    const selectLevelBtn = document.getElementById('selectLevelBtn');
+    const nextLevelBtn = document.getElementById('nextLevelBtn');
+    const wrongListEl = document.getElementById('wrongList');
+    const wrongBoxEl = document.querySelector('.wrong-box');
+
+    const scoreEl = document.getElementById('score');
+
+    const hitSound = document.getElementById('hitSound');
+    const winSound = document.getElementById('winSound');
+    const bgm = document.getElementById('bgm');
+
+    if (hitSound) { hitSound.src = "image/audio1.mp3"; hitSound.volume = 0.8; }
+    if (winSound) { winSound.src = "image/win2.mp3";  winSound.volume = 1.0; }
+    if (bgm)      { bgm.src = "image/bgm3.mp3";       bgm.volume = 0.35; }
+
+    /* ---------- ชุดคำ: นาม/กริยา/วิเศษณ์ ---------- */
+    const NOUNS = [ "ครู","นักเรียน","หมอ","ตำรวจ","ทหาร","พ่อค้า","แม่ค้า","คนสวน","ชาวนา","ชาวประมง",
+      "นักกีฬา","นักร้อง","นักแสดง","พนักงาน","ผู้จัดการ","เจ้าของ","เพื่อน","พี่","น้อง","พ่อ",
+      "แม่","ลูก","ปู่","ย่า","ตา","ยาย","หลาน","ลุง","ป้า","น้า",
+      "แมว","หมา","ม้า","วัว","ควาย","แพะ","แกะ","หมู","ไก่","เป็ด",
+      "ปลา","กุ้ง","ปู","หอย","งู","จระเข้","จิ้งจก","ตุ๊กแก","นก","ผีเสื้อ",
+      "ยุง","มด","แมลงสาบ","ตั๊กแตน","ตุ่น","หนู","กระต่าย","ช้าง","สิงโต","เสือ",
+      "โต๊ะ","เก้าอี้","เตียง","ตู้","ทีวี","ตู้เย็น","พัดลม","โทรศัพท์","คอมพิวเตอร์","หนังสือ",
+      "ปากกา","ดินสอ","ยางลบ","ไม้บรรทัด","กระเป๋า","รองเท้า","เสื้อ","กางเกง","หมวก","แว่นตา",
+      "นาฬิกา","รถยนต์","รถไถ","จักรยาน","จาน","ช้อน","ส้อม","แก้ว","หม้อ","มีด",
+      "บ้าน","โรงเรียน","จังหวัดเลย","ตลาด","โรงพยาบาล","ธนาคาร","ร้านค้า","สนามเด็กเล่น","สนามกีฬา",
+      "สถานีตำรวจ","ปั๊มน้ำมัน","โรงภาพยนตร์","ร้านอาหาร","ห้องน้ำ","ห้องนอน","ห้องครัว","ห้องนั่งเล่น","ห้องเรียน","ห้องสมุด",
+      "ห้องประชุม","ออฟฟิศ","โรงงาน","ภูเขา","ทะเล","น้ำตก","แม่น้ำ","ถนน","ซอย",
+      "หมู่บ้าน","เมือง","ประเทศ","โลก","ทุงทุงทุง ซาฮูร์" ];
+    const VERBS = [ "กิน","เดิน","นอน","นั่ง","วิ่ง","ยืน","เขียน","อ่าน","วาด","พูด","ฟัง","ดู","ร้อง","เต้น","เล่น","ทำงาน",
+      "เรียน","สอน","ช่วย","ซื้อ","ขาย","บอก","ถาม","ตอบ","เก็บ","ล้าง","อาบ","ขับ","ขี่","ข้าม","ว่าย","พับ","ตาก","กวาด",
+      "ถู","หยิบ","ยก","วาง","รับ","ส่ง","เปิด","ปิด","เท","ตัก","แกะ","แคะ","เกา","ขีด","ถัก","ทอ","ผูก","แก้","รัด","พ่น","เป่า",
+      "พุ่ง","ขว้าง","ยิง","หลบ","ซ่อน","ปีน","ขุด","ขุด","ไถ","เกี่ยว","หว่าน","ดำ","เก็บเกี่ยว",
+      "ขน","ย้าย","แบก","หาม","ลาก","ถู","พับ","ถวาย","กราบ","ไหว้","บูชา","นับ","ทอด","ชั่ง","ตวง","บวก","ลบ","คูณ","หาร",
+      "สร้าง","ซ่อม","รื้อ","พัง","สร้างสรรค์","ทำลาย" ];
+    const ADVERBS = [ "ดี","ชั่ว","สวย","น่ารัก","อ้วน","ผอม","สูง","ต่ำ","เตี้ย","ใหญ่","เล็ก","กว้าง","แคบ","หนัก","เบา","คม","เหม็น",
+      "ร้อน","เย็น","แข็ง","อ่อน","เปียก","แห้ง","สะอาด","สกปรก","แดง","เขียว","เหลือง","น้ำเงิน","ดำ","ขาว","ชมพู",
+      "ม่วง","ส้ม","ฟ้า","เทา","น้ำตาล","ทอง","เงิน","มาก","น้อย","หนึ่ง","สอง","สาม","สิบ","ร้อย","พัน","หมื่น","แสน","ล้าน",
+      "ทั้งหมด","ครึ่ง","เท่า","หมด","เช้า","สาย","บ่าย","เย็น","ดึก","นาน","เร็ว","ช้า","แหลม","วันนี้","พรุ่งนี้",
+      "ตลอด","บ่อย","หวาน","เปรี้ยว","เค็ม","เผ็ด","ขม","จืด","มัน","ฝาด","เฝื่อน","ดัง","เบา","เงียบ","ว่องไว",
+      "คล่องแคล่ว","ช้าๆ","เร็วๆ","แข็งแรง","อ่อนแอ","สงบ","รวดเร็ว","วุ่นวาย","เรียบร้อย","ใกล้","ไกล","บน",
+      "ล่าง","นอก","ใน","หน้า","หลัง","ซ้าย","ขวา","ก่อน","หลัง","แต่เช้า","เมื่อวาน","ดึกดื่น" ];
+
+    /* ---------- นิยามด่าน (3 ด่าน) ---------- */
+    const LEVELS = [
+      { id:0, name:"ด่าน 1", mission:"ภารกิจ : ยิงอุกกาบาต “คำนาม” ให้มากที่สุด", correct:NOUNS, wrong:[...VERBS, ...ADVERBS] },
+      { id:1, name:"ด่าน 2", mission:"ภารกิจ : ยิงอุกกาบาต “คำกริยา” ให้มากที่สุด", correct:VERBS, wrong:[...NOUNS, ...ADVERBS] },
+      { id:2, name:"ด่าน 3", mission:"ภารกิจ : ยิงอุกกาบาต “คำวิเศษณ์” ให้มากที่สุด", correct:ADVERBS, wrong:[...NOUNS, ...VERBS] },
+    ];
+    let selectedLevel = 0;
+
+    /* ---------- คะแนนสะสม = 3 รอบ ---------- */
+    let cumulativeScore = 0;
+    let roundsPlayed   = 0;
+    let lastRunScore   = 0;
+
+    function updateAccum(){
+      const el = document.getElementById('accumVal');
+      if(el) el.textContent = cumulativeScore.toString();
+    }
+    function refreshNextButton(){
+      const sumEl = document.getElementById('accumSummary');
+      const totalEl = document.getElementById('accumTotal');
+      if (roundsPlayed < 2){
+        nextLevelBtn.disabled = false; nextLevelBtn.textContent = 'ด่านถัดไป'; nextLevelBtn.style.opacity = '1';
+        if(sumEl) sumEl.style.display = 'none';
+        return;
+      }
+      if (roundsPlayed === 2){
+        nextLevelBtn.disabled = false; nextLevelBtn.textContent = 'สรุปคะแนนสะสม'; nextLevelBtn.style.opacity = '1';
+        if(sumEl) sumEl.style.display = 'none';
+        return;
+      }
+      nextLevelBtn.disabled = true; nextLevelBtn.textContent = 'ครบ 3 รอบแล้ว'; nextLevelBtn.style.opacity = '0.6';
+      if (sumEl && totalEl){ totalEl.textContent = cumulativeScore.toString(); sumEl.style.display = 'block'; }
+    }
+
+    /* ---------- พารามิเตอร์เกมอุกาบาต + กติกาคะแนน ---------- */
+    const stageSeconds = 120;
+    const MAX_COMETS = 6;
+    const SPAWN_MS = 650;
+    const SPEED_MIN = 120, SPEED_MAX = 260;
+    const VX_MAX = 140;
+
+    const PROB_CORRECT = 0.40;
+
+    // ระบบคะแนนดิบ + ลูกเร็ว
+    const FAST_VY = 220;
+    const CORRECT_NORMAL = 1;
+    const CORRECT_FAST   = 2;
+    const WRONG_NORMAL   = -1;
+    const WRONG_FAST     = -2;
+
+    // เกณฑ์ผ่านด่าน
+    const PASS_SCORE = 30;
+
+    let running = false, ended = false, paused = false;
+    let spawner = null, countdown = null;
+    let remain = stageSeconds;
+    let lastTime = 0;
+
+    let score = 0;
+    let clickedWrongWords = [];
+
+    /* ---------- ยูทิล ---------- */
+    function fmt(sec){
+      const m = Math.floor(sec/60).toString().padStart(2,'0');
+      const s = (sec%60).toString().padStart(2,'0');
+      return `${m}:${s}`;
+    }
+    function floatText(text, x, y, kind){
+      const t = document.createElement('div');
+      t.className = 'float'; t.textContent = text;
+      t.style.left = x+'px'; t.style.top = y+'px';
+      t.style.color = (kind==='ok') ? 'var(--ok)' : 'var(--bad)';
+      t.style.animation = 'rise 800ms ease-out forwards';
+      document.body.appendChild(t);
+      t.addEventListener('animationend', () => t.remove(), {once:true});
+    }
+    function rand(min,max){return Math.random()*(max-min)+min}
+    function randInt(min,max){return Math.floor(rand(min,max+1))}
+
+    function playHit(){
+      try { const a = hitSound.cloneNode(true); a.volume = 1; a.src = hitSound.src; a.play().catch(()=>{}); } catch(e){}
+    }
+
+    // ===== เด็คกันคำซ้ำต่อด่าน =====
+    let correctDeck = [], wrongDeck = [];
+    let seenRound = new Set();
+
+    function shuffleInPlace(arr){
+      for(let i = arr.length - 1; i > 0; i--){
+        const j = (Math.random() * (i + 1)) | 0;
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function resetDecksForLevel(){
+      const L = LEVELS[selectedLevel] || LEVELS[0];
+      correctDeck = shuffleInPlace(L.correct.slice());
+      wrongDeck   = shuffleInPlace(L.wrong.slice());
+      seenRound.clear();
+    }
+
+    function drawUnique(fromCorrect){
+      const L = LEVELS[selectedLevel] || LEVELS[0];
+      let deck = fromCorrect ? correctDeck : wrongDeck;
+
+      let guard = L.correct.length + L.wrong.length + 5;
+
+      while (guard-- > 0){
+        if (deck.length === 0){
+          if (fromCorrect){ correctDeck = shuffleInPlace(L.correct.slice()); deck = correctDeck; }
+          else            { wrongDeck   = shuffleInPlace(L.wrong.slice());   deck = wrongDeck;   }
+        }
+        const word = deck.pop();
+        if (!seenRound.has(word)){
+          seenRound.add(word);
+          return word;
+        }
+      }
+      return fromCorrect ? (L.correct[0] || '') : (L.wrong[0] || '');
+    }
+
+function hitComet(node, atX, atY){
+  if(!node || !running) return;
+  if(node.dataset.hit) return;
+  node.dataset.hit = '1';
+
+  const val  = node.dataset.value === '1';
+  const fast = node.dataset.fast  === '1';
+
+  let delta = 0;
+  if (val){
+    delta = fast ? CORRECT_FAST : CORRECT_NORMAL;
+    score += delta;
+    scoreEl.textContent = score;
+    floatText('+'+delta + (fast?' ⚡':''), atX, atY, 'ok');
+  }else{
+    delta = fast ? WRONG_FAST : WRONG_NORMAL;
+    score += delta;
+    scoreEl.textContent = score;
+    const text = node.querySelector('.label')?.textContent?.trim();
+    if(text) clickedWrongWords.push(text);
+    floatText(delta.toString(), atX, atY, 'bad');
+  }
+
+  if (score >= PASS_SCORE) { endGame('win'); }
+
+// หันหัวไปที่อุกกาบาตที่เพิ่งระเบิด
+try {
+  window.__GAME__?.pointShipToNode?.(node);
+} catch(e){}
+
+  shatter(node);
+  playHit();
+}
+    /* ---------- สร้างอุกาบาต ---------- */
+function spawnComet(){
+  if(!running) return;
+  if(document.querySelectorAll('.comet').length >= MAX_COMETS) return;
+
+  const size = randInt(220, 320);
+  const vy   = rand(SPEED_MIN, SPEED_MAX);
+  const vx   = [ -1, 0, 1 ][randInt(0,2)] * rand(40, VX_MAX);
+  const startX = randInt(0, Math.max(20, window.innerWidth - size - 20));
+  const startY = -size - 40;
+
+  const node = document.createElement('div');
+  node.className = 'comet';
+  node.style.setProperty('--size', size+'px');
+  node.style.left = '0px'; node.style.top = '0px';
+
+  const isFast = vy >= FAST_VY;
+  node.dataset.fast = isFast ? '1' : '0';
+  if(isFast) node.classList.add('fast');
+
+  const isCorrect = Math.random() < PROB_CORRECT;
+  const label = document.createElement('div');
+  label.className = 'label';
+  if (isCorrect){
+    label.textContent = drawUnique(true);
+    node.dataset.value = '1';
+  } else {
+    label.textContent = drawUnique(false);
+    node.dataset.value = '0';
+  }
+
+  node.dataset.x = startX; node.dataset.y = startY;
+  node.dataset.vx = vx;    node.dataset.vy = vy;
+
+  node.appendChild(label);
+
+  // 🔥 ลิสต์เนอร์ "อันเดียวพอ" เรียก hitComet แล้วจบ
+  node.addEventListener('click', (ev) => {
+    if(!running) return;
+    if(node.dataset.hit) return;
+    const r = node.getBoundingClientRect();
+    hitComet(
+      node,
+      ev.clientX ?? (r.left + r.width/2),
+      ev.clientY ?? (r.top + r.height/2)
+    );
+  }, { once:true });
+
+  game.appendChild(node);
+  node.style.transform = `translate(calc(${startX}px + var(--comet-offset-x)),
+                               calc(${startY}px + var(--comet-offset-y)))`;
+}
+
+
+    /* ---------- แตกกระจาย ---------- */
+    function shatter(cometEl){
+      const rect = cometEl.getBoundingClientRect();
+      cometEl.style.opacity = '0'; cometEl.style.pointerEvents = 'none';
+      setTimeout(() => cometEl.remove(), 250);
+
+      const piece = Math.max(12, Math.floor(rect.width/6));
+      const cols = Math.ceil(rect.width / piece);
+      const rows = Math.ceil(rect.height / piece);
+
+      for(let ry=0; ry<rows; ry++){
+        for(let rx=0; rx<cols; rx++){
+          const p = document.createElement('div');
+          p.className = 'piece';
+          p.style.setProperty('--csizeW', rect.width+'px');
+          p.style.setProperty('--csizeH', rect.height+'px');
+
+          p.style.left = (rect.left + rx*piece)+'px';
+          p.style.top  = (rect.top  + ry*piece)+'px';
+          p.style.width = piece+'px';
+          p.style.height = piece+'px';
+          p.style.backgroundPosition = `-${rx*piece}px -${ry*piece}px`;
+
+          const spread = Math.max(120, rect.width*1.2);
+          const dx = (rx - cols/2 + (Math.random()-.5))*spread;
+          const dy = (ry - rows/2 + (Math.random()-.5))*spread - 40;
+          const rot = (Math.random()*220 - 110)+'deg';
+          p.style.setProperty('--dx', dx+'px');
+          p.style.setProperty('--dy', dy+'px');
+          p.style.setProperty('--rot', rot);
+          p.style.animation = `blast ${rand(550, 900)}ms ease-out forwards`;
+
+          document.body.appendChild(p);
+          p.addEventListener('animationend', () => p.remove(), {once:true});
+        }
+      }
+    }
+
+    /* ---------- ลูปเกม ---------- */
+    function tick(now){
+      const dt = Math.min(0.05, (now - lastTime)/1000);
+      lastTime = now;
+
+      document.querySelectorAll('.comet').forEach(node => {
+        let x = parseFloat(node.dataset.x)||0;
+        let y = parseFloat(node.dataset.y)||0;
+        const vx = parseFloat(node.dataset.vx)||0;
+        const vy = parseFloat(node.dataset.vy)||0;
+        x += vx * dt; y += vy * dt;
+        node.dataset.x = x; node.dataset.y = y;
+        node.style.transform = `translate(calc(${x}px + var(--comet-offset-x)),
+                                   calc(${y}px + var(--comet-offset-y)))`;
+
+        const size = parseFloat(getComputedStyle(node).getPropertyValue('--size'))||100;
+        if(y > window.innerHeight + size*1.5 || x < -size*1.5 || x > window.innerWidth + size*1.5){
+          node.remove();
+        }
+      });
+
+      if(running) requestAnimationFrame(tick);
+    }
+
+    /* ---------- เริ่ม/จบ/พักเกม ---------- */
+    function clearScene(){
+      [...document.querySelectorAll('.comet,.piece,.float')].forEach(el => el.remove());
+    }
+
+    function startGame(){
+      running = true; ended = false; paused = false;
+      overlay.classList.remove('show');
+
+      score = 0; scoreEl.textContent = score;
+      lastRunScore = 0;
+      resetDecksForLevel();
+
+      clickedWrongWords = [];
+      if (wrongListEl) wrongListEl.innerHTML = '';
+      if (wrongBoxEl)  wrongBoxEl.style.display = 'none';
+
+      try{ if(bgm){ bgm.currentTime = 0; bgm.play().catch(()=>{}); } }catch(e){}
+
+      remain = stageSeconds; timerEl.textContent = fmt(remain);
+      if(countdown) clearInterval(countdown);
+      countdown = setInterval(() => {
+        if(!running) return;
+        remain--; timerEl.textContent = fmt(remain);
+        if(remain <= 0){ endGame('time'); }
+      }, 1000);
+
+      if(spawner) clearInterval(spawner);
+      spawner = setInterval(spawnComet, SPAWN_MS);
+
+      lastTime = performance.now();
+      requestAnimationFrame(tick);
+    }
+
+    function endGame(reason='time'){
+      if(ended) return;
+      ended = true; running = false;
+      clearInterval(countdown);
+      clearInterval(spawner);
+
+      lastRunScore = score;
+      finalScoreEl.textContent = score.toString();
+      endTitleEl.textContent = (reason==='win') ? 'เก่งมาก! ผ่านด่าน 🎉' : 'หมดเวลา!';
+
+      if (wrongListEl){
+        if (clickedWrongWords.length === 0){
+          if (wrongBoxEl) wrongBoxEl.style.display = 'none';
+        } else {
+          const seen = new Set();
+          const unique = clickedWrongWords.filter(w => (seen.has(w) ? false : (seen.add(w), true)));
+          wrongListEl.innerHTML = unique.map(w => `<span class="chip">${w}</span>`).join('');
+          if (wrongBoxEl) wrongBoxEl.style.display = 'block';
+        }
+      }
+
+      try{ if (winSound) { winSound.currentTime = 0; winSound.play().catch(()=>{}); } }catch(e){}
+      try{ if(bgm){ bgm.pause(); bgm.currentTime = 0; } }catch(e){}
+
+      overlay.classList.add('show');
+    }
+
+    function pauseGame(){
+      if (!running) return;
+      paused = true;
+      running = false;
+      clearInterval(countdown);
+      clearInterval(spawner);
+      try { if (bgm) bgm.pause(); } catch(e){}
+      const pauseBtn = document.getElementById('pauseBtn');
+      if (pauseBtn) pauseBtn.textContent = '▶️ ต่อ';
+    }
+
+    function resumeGame(){
+      if (!paused || ended) return;
+      paused = false;
+      running = true;
+      lastTime = performance.now();
+      countdown = setInterval(() => {
+        if(!running) return;
+        remain--;
+        timerEl.textContent = fmt(remain);
+        if(remain <= 0){ endGame('time'); }
+      }, 1000);
+      spawner = setInterval(spawnComet, SPAWN_MS);
+      requestAnimationFrame(tick);
+      try { if (bgm) bgm.play().catch(()=>{}); } catch(e){}
+      const pauseBtn = document.getElementById('pauseBtn');
+      if (pauseBtn) pauseBtn.textContent = '⏸ หยุด';
+    }
+
+    const pauseBtn = document.getElementById('pauseBtn');
+    if(pauseBtn){
+      pauseBtn.addEventListener('click', ()=>{
+        if(!paused){ pauseGame(); pauseBtn.textContent = '▶️ ต่อ'; }
+        else{ resumeGame(); pauseBtn.textContent = '⏸ หยุด'; }
+      });
+    }
+
+    // === Auto pause/resume เมื่อสลับแท็บ/พับแอป ===
+    let wasRunningBeforeHide = false;
+
+    function uiBlockingOpen(){
+      const landing = document.getElementById('landing');
+      const startScreen = document.getElementById('startScreen');
+      const guide = document.getElementById('guideScreen');
+      const overlayOpen = overlay && overlay.classList.contains('show');
+      const landingOpen = landing && !landing.classList.contains('hide');
+      const startOpen   = startScreen && startScreen.style.display !== 'none';
+      const guideOpen   = guide && getComputedStyle(guide).display !== 'none';
+      return overlayOpen || landingOpen || startOpen || guideOpen;
+    }
+
+    function handleHidden(){
+      wasRunningBeforeHide = running && !ended && !uiBlockingOpen();
+      if (wasRunningBeforeHide) pauseGame();
+    }
+
+    function handleVisible(){
+      if (wasRunningBeforeHide && paused && !ended && !uiBlockingOpen()){
+        resumeGame();
+      }
+      wasRunningBeforeHide = false;
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) handleHidden(); else handleVisible();
+    });
+    window.addEventListener('blur', handleHidden);
+    window.addEventListener('focus', handleVisible);
+    window.addEventListener('pagehide', handleHidden);
+    window.addEventListener('pageshow', handleVisible);
+
+    const quickHome = document.getElementById('quickRestart');
+    if(quickHome){ quickHome.addEventListener('click', ()=>{ location.reload(); }); }
+
+    // ===== ปุ่ม Overlay =====
+    restartBtn.addEventListener('click', () => { clearScene(); startGame(); });
+
+    selectLevelBtn.addEventListener('click', () => {
+      overlay.classList.remove('show');
+      clearScene();
+      cumulativeScore = 0; roundsPlayed = 0; lastRunScore = 0; updateAccum();
+      const landing = document.getElementById('landing');
+      const startScreen = document.getElementById('startScreen');
+      if (landing){ landing.classList.remove('hide'); }
+      if (startScreen){ startScreen.style.display = 'none'; }
+    });
+
+    nextLevelBtn.addEventListener('click', () => {
+      if (roundsPlayed < 2) {
+        cumulativeScore += lastRunScore; roundsPlayed++; updateAccum();
+        selectedLevel = (selectedLevel + 1) % LEVELS.length;
+        overlay.classList.remove('show');
+        openStartForLevel(true);
+        return;
+      }
+      if (roundsPlayed === 2) {
+        cumulativeScore += lastRunScore; roundsPlayed++; updateAccum();
+        const sumEl = document.getElementById('accumSummary');
+        const totalEl = document.getElementById('accumTotal');
+        if (sumEl && totalEl){ totalEl.textContent = cumulativeScore.toString(); sumEl.style.display = 'block'; }
+        endTitleEl.textContent = 'สรุปคะแนนสะสม';
+        finalScoreEl.textContent = lastRunScore.toString();
+        refreshNextButton();
+        return;
+      }
+    });
+
+    /* ---------- API ให้หน้าเริ่มใช้ ---------- */
+    window.__GAME__ = {
+  startGame,
+  setSelectedLevel: (i)=>{ selectedLevel = i|0; },
+  getLevel: (i)=> LEVELS[i],
+  getMissionFor: (i)=> (LEVELS[i] && LEVELS[i].mission) ? LEVELS[i].mission : '',
+  hitComet
+};
+
+    /* ---------- หมุนยานตามเมาส์ ---------- */
+    (function(){
+      const ship = document.getElementById('ship');
+      if(!ship) return;
+      const SHIP_OFFSET_DEG = 90;
+      function rotateTo(x, y){
+        const r = ship.getBoundingClientRect();
+        const pivotX = r.left + r.width  * 0.5;
+        const pivotY = r.top  + r.height * 0.75;
+        const dx = x - pivotX, dy = y - pivotY;
+        const deg = Math.atan2(dy, dx) * 180 / Math.PI;
+        ship.style.transform = `translateX(-50%) rotate(${deg + SHIP_OFFSET_DEG}deg)`;
+      }
+      document.addEventListener('mousemove', (e) => rotateTo(e.clientX, e.clientY));
+      rotateTo(window.innerWidth/2, window.innerHeight/2);
+
+      window.__GAME__ = window.__GAME__ || {};
+      window.__GAME__.pointShipAt = rotateTo;
+      window.__GAME__.pointShipToNode = (el) => {
+        if(!el) return;
+        const rc = el.getBoundingClientRect();
+        rotateTo(rc.left + rc.width/2, rc.top + rc.height/2);
+      };
+    })();
+
+    /* ---------- หน้าเริ่มของด่าน (ภารกิจ + นับถอยหลัง) ---------- */
+    const startScreen  = document.getElementById('startScreen');
+    const startTitle   = document.getElementById('startTitle');
+    const startBtn     = document.getElementById('startBtn');
+    const countdownEl  = document.getElementById('countdown');
+
+    function openStartForLevel(autoCountdown = true){
+      const L = LEVELS[selectedLevel];
+      if(startTitle){
+        startTitle.textContent = (L.mission || `ภารกิจ: ${L.name}`);
+      }
+      if(startScreen) startScreen.style.display = 'flex';
+      if(startBtn) startBtn.style.display = 'none';
+      if(!autoCountdown) return;
+
+      if(countdownEl){
+        let n = 3;
+        countdownEl.textContent = n; countdownEl.style.display = 'block';
+        const itv = setInterval(() => {
+          n--;
+          if(n>0){ countdownEl.textContent = n; }
+          else{
+            clearInterval(itv);
+            if(startScreen) startScreen.style.display = 'none';
+            startGame();
+          }
+        }, 1000);
+      }
+    }
+
+    if(startBtn){
+      startBtn.addEventListener('click', () => {
+        startBtn.style.display = 'none';
+        let n = 3; countdownEl.textContent = n; countdownEl.style.display = 'block';
+        const itv = setInterval(() => {
+          n--;
+          if(n>0){ countdownEl.textContent = n; }
+          else{ clearInterval(itv); startScreen.style.display = 'none'; startGame(); }
+        }, 1000);
+      }, { once:true });
+    }
+
+    /* ---------- Landing + คู่มือ ---------- */
+    (function(){
+      const landing     = document.getElementById('landing');
+      const levelBtns   = document.querySelectorAll('.levelBtn');
+      const startScreen = document.getElementById('startScreen');
+      const startTitle  = document.getElementById('startTitle');
+
+      levelBtns.forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const idx = parseInt(btn.getAttribute('data-level'),10);
+          if (Number.isNaN(idx)) return;
+
+          if(window.__GAME__ && window.__GAME__.setSelectedLevel){
+            window.__GAME__.setSelectedLevel(idx);
+          }
+          const L = (window.__GAME__ && window.__GAME__.getLevel) ? window.__GAME__.getLevel(idx) : null;
+          startTitle.textContent = ((L && L.mission) ? L.mission : `ภารกิจ: ${btn.textContent}`);
+
+          landing.classList.add('hide');
+          startScreen.style.display = 'flex';
+          const startBtn = document.getElementById('startBtn');
+          if(startBtn){ startBtn.style.display = 'inline-block'; }
+          const countdownEl = document.getElementById('countdown');
+          if(countdownEl){ countdownEl.style.display = 'none'; }
+        });
+      });
+
+      const guideBtn  = document.getElementById('guideBtn');
+      const guide     = document.getElementById('guideScreen');
+      const guideBack = document.getElementById('guideBack');
+
+      if (guideBtn && guide){
+        guideBtn.addEventListener('click', ()=>{
+          landing.classList.add('hide');
+          guide.style.display = 'flex';
+        });
+      }
+      if (guideBack && guide){
+        guideBack.addEventListener('click', ()=>{
+          guide.style.display = 'none';
+          landing.classList.remove('hide');
+        });
+      }
+    })();
+
+  })();
+  </script>
+<script>
+(function(){
+  const micBtn   = document.getElementById('micBtn');
+  const voicePill= document.getElementById('voicePill');
+  if(!micBtn) return;
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){
+    micBtn.textContent = '🎤 ไม่รองรับ';
+    micBtn.disabled = true;
+    return;
+  }
+
+  let askedOnce = false;
+  let keepListening = false;
+  let recognizing = false;
+
+  const rec = new SR();
+  rec.lang = 'th-TH';
+  rec.continuous = true;
+  rec.interimResults = true;
+
+  function showListening(on){
+    micBtn.textContent = on ? '🎤 เสียง: เปิด' : '🎤 เสียง: ปิด';
+    if(voicePill) voicePill.style.display = on ? 'inline-block' : 'none';
+  }
+
+  // แตกคำแบบง่าย: โฟกัสเฉพาะคำที่อยู่บนจอ
+  function tokensFrom(s){
+    s = (s||'').toLowerCase().trim();
+    s = s.replace(/\s*(ค่ะ|ครับ|คะ|ฮะ)$/,'');     // ตัดคำลงท้ายสุภาพ
+    return s.split(/[\s,，。\.!?:;、]+/).filter(Boolean);
+  }
+
+  function currentCometsMap(){
+    const map = new Map();
+    document.querySelectorAll('.comet').forEach(n=>{
+      const label = (n.querySelector('.label')?.textContent||'').trim().toLowerCase();
+      if(!label) return;
+      if(!map.has(label)) map.set(label, []);
+      map.get(label).push(n);
+    });
+    return map;
+  }
+  function pickLowest(arr){
+    return arr.reduce((best,n)=>{
+      const y = parseFloat(n.dataset.y)||0;
+      return (!best || y > (parseFloat(best.dataset.y)||0)) ? n : best;
+    }, null);
+  }
+  function centerOf(node){
+    const r = node.getBoundingClientRect();
+    return { x: r.left + r.width/2, y: r.top + r.height/2 };
+  }
+
+  function tryFire(phrase){
+    const toks = tokensFrom(phrase);
+    if(!toks.length) return false;
+
+    const cmap = currentCometsMap();
+    for(const t of toks){
+      if(cmap.has(t)){
+        const node = pickLowest(cmap.get(t));
+        if(node && !node.dataset.hit){
+          const c = centerOf(node);
+          window.__GAME__?.hitComet(node, c.x, c.y); // ยิงตรง ไม่จำลองคลิก
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  rec.onresult = (e) => {
+    for(let i=e.resultIndex; i<e.results.length; i++){
+      const r = e.results[i];
+      const txt = (r[0]?.transcript || '').trim();
+      if(!txt) continue;
+      // ประมวลผลทั้ง interim และ final เพื่อความ "เรียลไทม์"
+      tryFire(txt);
+    }
+  };
+  rec.onstart = () => { recognizing = true; showListening(true); };
+  rec.onend   = () => {
+    recognizing = false; showListening(false);
+    if(keepListening && !document.hidden){
+      setTimeout(()=>{ try{ rec.start(); }catch(_){} }, 200);
+    }
+  };
+  rec.onerror = (e) => {
+    // no-speech/aborted/audio-capture = ไม่ต้องหยุดใช้งานทั้งหมด
+    if(e?.error === 'not-allowed'){
+      micBtn.textContent = '🎤 ไม่ได้รับอนุญาต';
+      micBtn.disabled = true;
+    }
+  };
+
+  async function ensureMicPermissionOnce(){
+    if(askedOnce) return;
+    askedOnce = true;
+    try{
+      const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+      // ปิด track ทิ้งได้ สิทธิยังอยู่จนปิดหน้า
+      stream.getTracks().forEach(t=>t.stop());
+    }catch(_){
+      micBtn.textContent = '🎤 ไม่ได้รับอนุญาต';
+      micBtn.disabled = true;
+      throw _;
+    }
+  }
+
+  function startListen(){
+    keepListening = true;
+    try{ rec.start(); }catch(_){}
+  }
+  function stopListen(){
+    keepListening = false;
+    try{ rec.stop(); }catch(_){}
+  }
+
+  micBtn.addEventListener('click', async ()=>{
+    if(keepListening){ stopListen(); return; }
+    try{
+      await ensureMicPermissionOnce();
+      startListen();
+    }catch(_){}
+  });
+
+  // หยุดชั่วคราวเมื่อซ่อนแท็บ และกลับมาเริ่มใหม่เอง
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.hidden){
+      if(recognizing) try{ rec.stop(); }catch(_){}
+    }else if(keepListening){
+      setTimeout(()=>{ try{ rec.start(); }catch(_){} }, 150);
+    }
+  });
+})();
+</script>
+
+<!-- ===== Head-Only AR: วงกลมติดหน้าผาก + ชนคอมเม็ต ===== -->
+<script>
+(function(){
+  const camBtn = document.getElementById('camBtn');
+  const video  = document.getElementById('cameraMirror');
+  const hcv    = document.getElementById('headCanvas');
+  if(!camBtn || !video || !hcv) return;
+
+  /* ===== ค่าปรับแต่ง ===== */
+  const ALPHA = 0.38;         // smoothing (EMA)
+  const VIS_THR = 0.6;        // เกณฑ์ visibility ของ landmark
+  const RADIUS_MIN = 24, RADIUS_MAX = 56;
+  const DEBOUNCE_MS = 120;    // กันชนซ้ำถี่เกิน
+
+  /* ===== สถานะ ===== */
+  let stream = null;
+  let askedOnce = false;
+  let running = false;        // loop ส่งเฟรมให้ pose
+  let pose = null;            // โมเดลโครงก้างปลา
+  let lastLandmarks = null;
+  let smooth = null;          // {x,y,r} แบบเนียน
+  let lastHitAt = 0;
+
+  // เตรียม canvas
+  const hctx = hcv.getContext('2d', { alpha:true });
+  function fitCanvas(){
+    const dpr = Math.max(1, window.devicePixelRatio||1);
+    hcv.width  = Math.round(window.innerWidth * dpr);
+    hcv.height = Math.round(window.innerHeight * dpr);
+    hcv.style.width  = window.innerWidth + 'px';
+    hcv.style.height = window.innerHeight + 'px';
+    hctx.setTransform(1,0,0,1,0,0);
+    hctx.scale(dpr, dpr);
+  }
+  fitCanvas();
+  window.addEventListener('resize', fitCanvas);
+
+  // ตำแหน่ง crop แบบ cover + mirror (ตรงกับภาพที่เห็นบนจอ)
+  function coverCropRect(){
+    const vw = video.videoWidth || 640;
+    const vh = video.videoHeight || 480;
+    const sw = window.innerWidth, sh = window.innerHeight;
+    const scale = Math.max(sw / vw, sh / vh);
+    const sW = Math.round(sw / scale);
+    const sH = Math.round(sh / scale);
+    const sX = Math.round((vw - sW)/2);
+    const sY = Math.round((vh - sH)/2);
+    return {vw,vh, sw,sh, sX,sY,sW,sH};
+  }
+  function mapNormToScreen(nx, ny){
+    const {vw,vh, sw,sh, sX,sY,sW,sH} = coverCropRect();
+    const xInCrop = nx*vw - sX;
+    const yInCrop = ny*vh - sY;
+    let x = (xInCrop / sW) * sw;
+    let y = (yInCrop / sH) * sh;
+    // mirror (วิดีโอโดน scaleX(-1))
+    x = sw - x;
+    return {x, y};
+  }
+
+  // โหลด MediaPipe Pose แบบ dynamic ตอนเปิดกล้องครั้งแรก
+async function ensurePose(){
+  if (window.__POSE_READY__) return;     // ไม่โหลดซ้ำ
+  // ==== ตัวช่วยโหลดสคริปต์ ====
+  const loadScript = (src) => new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src; s.async = true;
+    s.onload = () => res();
+    s.onerror = () => rej(new Error('load fail: '+src));
+    document.head.appendChild(s);
+  });
+
+  // ==== แหล่งสำรองหลายตัว (เรียงลำดับลองใช้) ====
+  const POSE_BASES = [
+    'https://cdn.jsdelivr.net/npm/@mediapipe/pose',   // ตัวหลัก (อาจโดนบล็อก)
+    'https://unpkg.com/@mediapipe/pose',              // สำรองที่ 1
+    './libs/mediapipe/pose'                           // สำรองที่ 2 (โฮสต์ไฟล์เองในโปรเจกต์)
+  ];
+  const CAM_BASES = [
+    'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils',
+    'https://unpkg.com/@mediapipe/camera_utils',
+    './libs/mediapipe/camera_utils'
+  ];
+
+  let poseBase = null;
+
+  // พยายามโหลด camera_utils ก่อน (ตัวนี้เบา)
+  let camLoaded = false;
+  for (const base of CAM_BASES){
+    try { await loadScript(`${base}/camera_utils.js`); camLoaded = true; break; } catch(e){}
+  }
+  if (!camLoaded) throw new Error('โหลด camera_utils ไม่ได้');
+
+  // พยายามโหลด pose.js พร้อมกำหนด locateFile ให้ชี้ฐานเดียวกัน
+  for (const base of POSE_BASES){
+    try {
+      await loadScript(`${base}/pose.js`);
+      poseBase = base;
+      break;
+    } catch(e){}
+  }
+  if (!poseBase) throw new Error('โหลด pose.js ไม่ได้จากทุกแหล่ง');
+
+  // สร้างอ็อบเจ็กต์ Pose + ตั้งค่า
+  const p = new Pose.Pose({
+    locateFile: (f) => `${poseBase}/${f}`   // ให้ .wasm/.data ดึงจากฐานเดียวกัน
+  });
+  p.setOptions({
+    modelComplexity: 1,
+    smoothLandmarks: true,
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.5
+  });
+
+  // ส่งผลลัพธ์กลับไปที่ตัวแปรเดิมของคุณ
+  p.onResults(res => {
+    window.__LAST_LANDMARKS__ = (res && res.poseLandmarks && res.poseLandmarks.length) ? res.poseLandmarks : null;
+  });
+
+  // บอกให้ลูปหลักรู้ว่าใช้ได้แล้ว
+  window.__POSE_INSTANCE__ = p;
+  window.__POSE_READY__ = true;
+}
+
+  // อนุพันธ์จุดหน้าผากจาก “โครงก้างปลา”
+  function eyeForeheadFromPose(L){
+    // index ชุด BlazePose: 2=left_eye, 5=right_eye, 11=ls, 12=rs, 0=nose
+    const le=L[2], re=L[5], ls=L[11], rs=L[12];
+    if(!le||!re||!ls||!rs) return null;
+    if((le.visibility??1)<VIS_THR || (re.visibility??1)<VIS_THR) return null;
+
+    const mid = { x:(le.x+re.x)/2, y:(le.y+re.y)/2 };
+    const eyeDist = Math.hypot(le.x-re.x, le.y-re.y);
+    const shoulderMid = { x:(ls.x+rs.x)/2, y:(ls.y+rs.y)/2 };
+
+    // ทิศจากไหล่ไปหัว (ขึ้นบนหัว)
+    let ux = mid.x - shoulderMid.x, uy = mid.y - shoulderMid.y;
+    const len = Math.hypot(ux,uy) || 1; ux/=len; uy/=len;
+
+    // ขยับขึ้น ~0.25×eyeDist เพื่อถึงหน้าผาก
+    const fx = mid.x + ux * (-0.25 * eyeDist);
+    const fy = mid.y + uy * (-0.25 * eyeDist);
+    return { forehead:{x:fx, y:fy}, eyeDist };
+  }
+
+  function ema(prev, next, a){
+    if(!prev) return next;
+    return { x: prev.x + a*(next.x - prev.x),
+             y: prev.y + a*(next.y - prev.y),
+             r: prev.r + a*(next.r - prev.r) };
+  }
+
+  function drawCircle(x,y,r){
+    hctx.clearRect(0,0,window.innerWidth,window.innerHeight);
+    // glow
+    hctx.beginPath(); hctx.arc(x,y,r,0,Math.PI*2);
+    hctx.globalAlpha=0.25; hctx.lineWidth=Math.max(6, r*0.45);
+    hctx.strokeStyle='#ffffff'; hctx.shadowColor='#ffffff'; hctx.shadowBlur=22; hctx.stroke();
+    // core
+    hctx.beginPath(); hctx.arc(x,y,r,0,Math.PI*2);
+    hctx.globalAlpha=0.95; hctx.lineWidth=Math.max(3, r*0.2);
+    hctx.strokeStyle='#ffffff'; hctx.shadowBlur=0; hctx.stroke();
+    hctx.globalAlpha=1;
+  }
+
+  function circleHitsRect(cx,cy,r, rc){
+    const nx = Math.max(rc.left, Math.min(cx, rc.right));
+    const ny = Math.max(rc.top,  Math.min(cy, rc.bottom));
+    const dx = cx - nx, dy = cy - ny;
+    return (dx*dx + dy*dy) <= (r*r);
+  }
+  let lastShipAimAt = 0;
+  function aimShipThrottled(x,y){
+    const t=performance.now();
+    if(t-lastShipAimAt<20) return;
+    lastShipAimAt=t;
+    try{ window.__GAME__?.pointShipAt?.(x,y); }catch(e){}
+  }
+
+  function hitComets(cx,cy,r){
+    const now = performance.now();
+    if(now - lastHitAt < DEBOUNCE_MS) return;
+    const nodes = document.querySelectorAll('.comet');
+    for(const node of nodes){
+      if(node.dataset.hit) continue;
+      const rc = node.getBoundingClientRect();
+      if(circleHitsRect(cx,cy,r, rc)){
+        window.__GAME__?.hitComet(node, rc.left+rc.width/2, rc.top+rc.height/2);
+        lastHitAt = now;
+        break;
+      }
+    }
+  }
+
+  async function loop(){
+    if(!running || !video.videoWidth){ requestAnimationFrame(loop); return; }
+    try{ await pose.send({image: video}); }catch(_){}
+    const L = window.__LAST_LANDMARKS__;
+
+    if(L){
+      const info = eyeForeheadFromPose(L);
+      if(info){
+        const p = mapNormToScreen(info.forehead.x, info.forehead.y);
+        let r = Math.max(RADIUS_MIN, Math.min(RADIUS_MAX, info.eyeDist * window.innerWidth * 0.35));
+        smooth = ema(smooth, {x:p.x,y:p.y,r}, ALPHA);
+        drawCircle(smooth.x, smooth.y, smooth.r);
+        aimShipThrottled(smooth.x, smooth.y);
+        hitComets(smooth.x, smooth.y, smooth.r);
+      }else{
+        hctx.clearRect(0,0,window.innerWidth,window.innerHeight);
+      }
+    }else{
+      hctx.clearRect(0,0,window.innerWidth,window.innerHeight);
+    }
+    requestAnimationFrame(loop);
+  }
+
+  /* ===== ควบคุมกล้อง (ปุ่ม 📷) ===== */
+ async function startCamera(){
+  if (running) return;
+
+  // 0) เช็ค API
+  if (!navigator.mediaDevices?.getUserMedia) {
+    camBtn.textContent = '📷 กล้อง: ไม่รองรับ';
+    alert('ต้องรันผ่าน HTTPS/localhost และใช้เบราว์เซอร์ที่รองรับ getUserMedia');
+    return;
+  }
+
+  // 1) เปิดกล้อง "ก่อน" เสมอ
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'user' }, audio:false });
+  } catch (err) {
+    console.error('getUserMedia error:', err);
+    const reason =
+      err?.name === 'NotAllowedError' ? 'ผู้ใช้ปฏิเสธสิทธิ์กล้อง' :
+      err?.name === 'NotFoundError'   ? 'ไม่มีกล้องให้ใช้งาน' :
+      err?.name === 'NotReadableError'? 'กล้องถูกใช้โดยโปรแกรมอื่น' :
+      err?.message || String(err);
+    camBtn.textContent = '📷 กล้อง: เปิดไม่ได้';
+    alert('เปิดกล้องไม่สำเร็จ: ' + reason);
+    return;
+  }
+
+  // 2) แสดงวิดีโอทันที (ไม่รอโมเดล)
+  video.muted = true;
+  video.srcObject = stream;
+  await new Promise(res => {
+    if (video.readyState >= 1) res();
+    else video.onloadedmetadata = () => res();
+  });
+  try { await video.play(); } catch(_) {}
+  video.style.display = 'block';
+  hcv.style.display   = 'block';
+  camBtn.textContent  = '📷 กล้อง: เปิด';
+  running = true;
+  smooth = null;
+  requestAnimationFrame(loop);    // วนลูปไว้ ถึงยังไม่มีโมเดลก็แค่ยังไม่วาดวงกลม
+
+  // 3) โหลดโมเดล Pose แบบไม่บล็อกการใช้งาน
+  ensurePose()
+    .catch(err => {
+      console.warn('โหลด Pose ไม่สำเร็จ:', err);
+      // ❗ สำคัญ: ห้ามปิด stream ที่เปิดไว้แล้ว
+      camBtn.textContent = '📷 กล้อง: เปิด (ไม่มีโหมดหัว)';
+      // ผู้เล่นยังเห็นภาพจากกล้อง เล่นโหมดเลเซอร์/เมาส์ได้ตามปกติ
+    });
+}
+
+
+  function stopCamera(){
+    running = false;
+
+    // 1) หยุด track ทุกตัว
+    if (stream) {
+      stream.getTracks().forEach(t => t.stop());
+      stream = null;
+    }
+
+    // 2) เคลียร์ srcObject “แบบ property” (สำคัญกว่าการ removeAttribute)
+    try { video.srcObject = null; } catch(_) {}
+
+    // 3) ซ่อนเลเยอร์ + ล้างภาพ
+    video.pause();
+    video.style.display = 'none';
+    hcv.style.display   = 'none';
+    smooth = null;
+    hctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+    camBtn.textContent = '📷 กล้อง: ปิด';
+  }
+
+
+  camBtn.addEventListener('click', async ()=>{
+    if(!running){ try{ await startCamera(); }catch(_){} }
+    else{ stopCamera(); }
+  });
+
+  // ปิดกล้องอัตโนมัติเมื่อซ่อนแท็บ
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.hidden && running) stopCamera();
+  });
+
+})();
+</script>
+
+<!-- ===== Head-Circle Mode: ติดตามหน้าผากจากโครงก้างปลา ===== -->
+<script>
+(function(){
+  const headBtn = document.getElementById('headBtn');
+  const video   = document.getElementById('cameraMirror');
+  const hcv     = document.getElementById('headCanvas');
+  if(!headBtn || !video || !hcv) return;
+
+  // ---------- ค่าปรับ ----------
+  const ALPHA = 0.38;          // EMA smoothing
+  const VIS_THR = 0.6;         // visibility ขั้นต่ำของ landmark สำคัญ
+  const RADIUS_MIN = 24, RADIUS_MAX = 56;
+  const DEBOUNCE_MS = 120;     // กันโดนซ้ำถี่เกิน
+
+  // ---------- สภาวะ ----------
+  let headMode = false;        // false=เลเซอร์, true=วงกลมหัว
+  let running  = false;        // loop ประมวลผล
+  let pose     = null;         // ตัวตรวจโครงก้างปลา (โหลดแบบ on-demand)
+  let smooth = null;           // จุดหน้าผากแบบเนียน {x,y,r}
+  let lastHitAt = 0;
+
+  // เตรียม canvas
+  const hctx = hcv.getContext('2d', { alpha:true });
+  function fitHeadCanvas(){
+    const dpr = Math.max(1, window.devicePixelRatio||1);
+    hcv.width  = Math.round(window.innerWidth * dpr);
+    hcv.height = Math.round(window.innerHeight * dpr);
+    hcv.style.width  = window.innerWidth + 'px';
+    hcv.style.height = window.innerHeight + 'px';
+    hctx.setTransform(1,0,0,1,0,0);
+    hctx.scale(dpr, dpr);
+  }
+  fitHeadCanvas();
+  window.addEventListener('resize', fitHeadCanvas);
+
+  // ครอบแบบ cover (เหมือนเลเซอร์เดิม) + mirror
+  function coverCropRect(){
+    const vw = video.videoWidth || 640;
+    const vh = video.videoHeight || 480;
+    const sw = window.innerWidth, sh = window.innerHeight;
+    const scale = Math.max(sw / vw, sh / vh);
+    const sW = Math.round(sw / scale);
+    const sH = Math.round(sh / scale);
+    const sX = Math.round((vw - sW)/2);
+    const sY = Math.round((vh - sH)/2);
+    return {vw,vh, sw,sh, sX,sY,sW,sH};
+  }
+  function mapNormToScreen(nx, ny){
+    // nx,ny: 0..1 ในพิกัดวิดีโอต้นฉบับ
+    const {vw,vh, sw,sh, sX,sY,sW,sH} = coverCropRect();
+    const xInCrop = nx*vw - sX;
+    const yInCrop = ny*vh - sY;
+    let x = (xInCrop / sW) * sw;
+    let y = (yInCrop / sH) * sh;
+    // mirror ตาม CSS ของวิดีโอ
+    x = sw - x;
+    return {x, y};
+  }
+
+  // โหลด MediaPipe Pose แบบ dynamic (เฉพาะเมื่อเข้าโหมดหัวครั้งแรก)
+  async function ensurePoseLoaded(){
+    if(pose) return;
+    // โหลดสคริปต์จาก CDN แบบเบา ๆ (solutions classic)
+    const load = (src)=> new Promise((res,rej)=>{
+      const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s);
+    });
+    await load('https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js');
+    await load('https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js'); // เผื่ออนาคตใช้งาน camera utils
+
+    pose = new Pose.Pose({
+      locateFile: (f)=> `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`
+    });
+    pose.setOptions({
+      modelComplexity: 1,
+      smoothLandmarks: true,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5,
+    });
+  }
+
+  function eyeCenterAndDist(landmarks){
+    // BlazePose index (คร่าว ๆ): 2=left_eye, 5=right_eye, 11=ls, 12=rs
+    const L = landmarks;
+    const le = L[2], re = L[5], ls = L[11], rs = L[12], nose = L[0];
+    if(!le||!re||!ls||!rs||!nose) return null;
+    if((le.visibility??1)<VIS_THR || (re.visibility??1)<VIS_THR) return null;
+
+    // จุดกลางตา (ในพิกัด normalized 0..1)
+    const mid = { x:(le.x+re.x)/2, y:(le.y+re.y)/2 };
+    const eyeDist = Math.hypot(le.x - re.x, le.y - re.y);
+
+    // ทิศ "ขึ้นบนหัว": ไหล่กลาง → กลางตา
+    const shoulderMid = { x:(ls.x+rs.x)/2, y:(ls.y+rs.y)/2 };
+    let ux = mid.x - shoulderMid.x, uy = mid.y - shoulderMid.y;
+    const len = Math.hypot(ux,uy) || 1;
+    ux/=len; uy/=len;
+
+    // ขยับขึ้นไปประมาณ 0.25×ระยะตา-ตา เพื่อถึงหน้าผาก
+    const fx = mid.x + ux * ( -0.25 * eyeDist ); // ลบเพราะแกน y ลงล่าง
+    const fy = mid.y + uy * ( -0.25 * eyeDist );
+
+    return { mid, eyeDist, forehead:{x:fx, y:fy} };
+  }
+
+  function ema(prev, next, a){
+    if(!prev) return next;
+    return { x: prev.x + a*(next.x - prev.x),
+             y: prev.y + a*(next.y - prev.y),
+             r: prev.r + a*(next.r - prev.r) };
+  }
+
+  function drawCircle(x,y,r){
+    hctx.clearRect(0,0,window.innerWidth,window.innerHeight);
+    // glow outer
+    hctx.beginPath();
+    hctx.arc(x,y,r,0,Math.PI*2);
+    hctx.globalAlpha = 0.25;
+    hctx.lineWidth = Math.max(6, r*0.45);
+    hctx.strokeStyle = '#ffffff';
+    hctx.shadowColor = '#ffffff';
+    hctx.shadowBlur = 22;
+    hctx.stroke();
+    // core ring
+    hctx.beginPath();
+    hctx.arc(x,y,r,0,Math.PI*2);
+    hctx.globalAlpha = 0.95;
+    hctx.lineWidth = Math.max(3, r*0.2);
+    hctx.strokeStyle = '#ffffff';
+    hctx.shadowBlur = 0;
+    hctx.stroke();
+    hctx.globalAlpha = 1;
+  }
+
+  function circleHitsRect(cx,cy,r, rc){
+    const nx = Math.max(rc.left, Math.min(cx, rc.right));
+    const ny = Math.max(rc.top,  Math.min(cy, rc.bottom));
+    const dx = cx - nx, dy = cy - ny;
+    return (dx*dx + dy*dy) <= (r*r);
+  }
+
+  function tryHitComets(cx,cy,r){
+    const now = performance.now();
+    if(now - lastHitAt < DEBOUNCE_MS) return;
+    const nodes = document.querySelectorAll('.comet');
+    for(const node of nodes){
+      if(node.dataset.hit) continue;
+      const rc = node.getBoundingClientRect();
+      if(circleHitsRect(cx,cy,r, rc)){
+        window.__GAME__?.hitComet(node, rc.left + rc.width/2, rc.top + rc.height/2);
+        lastHitAt = now;
+        break;
+      }
+    }
+  }
+
+  // loop ประมวลผล: เรียก pose.send(image) ทุกเฟรม แล้วอ่านผลผ่าน callback
+  let lastLandmarks = null;
+  function setupPoseCallback(){
+    if(!pose) return;
+    pose.onResults(res=>{
+      lastLandmarks = (res && res.poseLandmarks && res.poseLandmarks.length) ? res.poseLandmarks : null;
+    });
+  }
+
+  async function loop(){
+    if(!running || !video.videoWidth) { requestAnimationFrame(loop); return; }
+    // ส่งเฟรมให้ pose วิเคราะห์
+    try{ await pose.send({image: video}); }catch(e){ /* เฟรมตกไม่เป็นไร */ }
+
+    const L = lastLandmarks;
+    if(headMode && L){
+      const inf = eyeCenterAndDist(L);
+      if(inf){
+        const {forehead, eyeDist} = inf;
+        // map → screen
+        const p = mapNormToScreen(forehead.x, forehead.y);
+        // สเกลรัศมีตามระยะตา
+        let r = Math.max(RADIUS_MIN, Math.min(RADIUS_MAX, eyeDist * window.innerWidth * 0.35));
+        const target = {x:p.x, y:p.y, r};
+        smooth = ema(smooth, target, ALPHA);
+
+        // หมุนยานตามหัว (เอฟเฟกต์)
+        try{ window.__GAME__?.pointShipAt?.(smooth.x, smooth.y); }catch(e){}
+
+        // วาดวงกลม + ชน
+        drawCircle(smooth.x, smooth.y, smooth.r);
+        tryHitComets(smooth.x, smooth.y, smooth.r);
+      }else{
+        hctx.clearRect(0,0,window.innerWidth,window.innerHeight);
+      }
+    }else{
+      // ไม่อยู่ในโหมดหัว → ไม่วาด
+      hctx.clearRect(0,0,window.innerWidth,window.innerHeight);
+    }
+
+    requestAnimationFrame(loop);
+  }
+
+  // ------------ ควบคุมโหมด/สถานะ ------------
+  async function enableHeadMode(on){
+    headMode = !!on;
+    headBtn.textContent = headMode ? '🧠 โหมด: วงกลมหัว' : '🧠 โหมด: เลเซอร์';
+    // สลับแสดง/ซ่อนแคนวาส
+    const camCanvas = document.getElementById('camCanvas');
+    if(headMode){
+      hcv.style.display = 'block';
+      if(camCanvas) camCanvas.style.display = 'none';  // ปิดเลเซอร์เดิม เพื่อไม่ซ้อนกัน
+      if(!pose){ await ensurePoseLoaded(); setupPoseCallback(); }
+      if(!running){ running = true; requestAnimationFrame(loop); }
+    }else{
+      hcv.style.display = 'none';
+      if(camCanvas && video.srcObject) camCanvas.style.display = 'block'; // กลับไปใช้เลเซอร์ถ้ากล้องเปิดอยู่
+    }
+  }
+
+  headBtn.addEventListener('click', ()=> enableHeadMode(!headMode));
+
+  // กล้องเริ่ม/หยุด → จัดการเลเยอร์
+  window.addEventListener('ar-camera-start', ()=>{
+    if(headMode){
+      hcv.style.display = 'block';
+      if(!running){ running = true; requestAnimationFrame(loop); }
+    }
+  });
+  window.addEventListener('ar-camera-stop', ()=>{
+    hcv.style.display = 'none';
+    // ไม่ปิด running เพื่อกลับมาเร็ว แต่ล้างภาพ
+    hctx.clearRect(0,0,window.innerWidth,window.innerHeight);
+    smooth = null;
+  });
+
+})();
+</script>
+
+</body>
+</html>
